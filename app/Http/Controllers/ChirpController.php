@@ -12,7 +12,9 @@ class ChirpController extends Controller
      */
     public function index()
     {
-       return view ('chirps.index');
+       return view ('chirps.index', [
+        'chirps' => Chirp:: with('user') ->latest()-> get()
+       ]);
     }
 
   
@@ -29,13 +31,18 @@ class ChirpController extends Controller
 
         ]);
 
+         // Crear un chirp asociado al usuario actual
+         $request->user()->chirps()->create([
+        'message' => $request->input('message'),
+    ]);
+
 
         //inset into database
-        Chirp :: create ([
-            'message' => $request->get ('message'),
-            'user_id' => auth () -> id(),
+        // Chirp :: create ([
+        //     'message' => $request->get ('message'),
+        //     'user_id' => auth () -> id(),
 
-        ]);
+        // ]);
         session()-> flash('status', __('Chirp Created Successfully!'));
         return redirect()->route('chirps.index');
     }
@@ -53,7 +60,14 @@ class ChirpController extends Controller
      */
     public function edit(Chirp $chirp)
     {
-        //
+        $this->authorize('update', $chirp);
+
+        // if (auth ()-> user()->isNot($chirp->user)){
+        //     abort(403);
+        // }
+        return view ('chirps.edit', [
+            'chirp' =>$chirp
+        ]);
     }
 
     /**
@@ -61,7 +75,20 @@ class ChirpController extends Controller
      */
     public function update(Request $request, Chirp $chirp)
     {
-        //
+
+        $this->authorize('update', $chirp);
+
+        // if (auth ()-> user()->isNot($chirp->user)){
+        //     abort(403);
+        // }
+
+        $validated = $request -> validate([
+            'message' => ['required' , 'min:4' , 'max:255' ],
+
+        ]);
+        $chirp->update($validated);
+
+        return to_route('chirps.index') ->with ('status', __('Chirp updated successfully!'));
     }
 
     /**
@@ -69,6 +96,11 @@ class ChirpController extends Controller
      */
     public function destroy(Chirp $chirp)
     {
-        //
+        $this->authorize('delete', $chirp);
+
+        $chirp ->delete();
+
+        return to_route('chirps.index') ->with ('status', __('Chirp deleted successfully!'));
+
     }
 }
